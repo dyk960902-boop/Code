@@ -49,7 +49,7 @@ class RewardAutoClickApp:
     def __init__(self, root):
 
         self.root = root
-        self.root.title("Reward Auto Click")
+        self.root.title("BongoCat 보상 자동 수령 프로그램")
         self.root.geometry("520x560")
 
         # 상태 변수
@@ -77,7 +77,7 @@ class RewardAutoClickApp:
 
         tk.Label(
             self.root,
-            text="Reward Auto Click",
+            text="Bongo Cat 보상 자동 수령",
             font=("Malgun Gothic", 16, "bold")
         ).pack(pady=10)
 
