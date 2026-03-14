@@ -6,6 +6,19 @@ from tkinter import scrolledtext, messagebox
 
 import pyautogui
 
+try:
+    import win32api
+    import win32con
+    import win32gui
+except ImportError:
+    win32api = None
+
+try:
+    import mss
+    import mss.tools
+except ImportError:
+    mss = None
+
 pyautogui.FAILSAFE = False
 
 try:
@@ -27,10 +40,6 @@ os.chdir(BASE_DIR)
 REWARD_ICON1 = "reward_icon1.png"
 REWARD_ICON2 = "reward_icon2.png"
 
-# 각 아이콘별 탐색 영역 (버튼 좌표 기준 주변 영역)
-SEARCH_REGION1 = (1985, 1310, 120, 120)   # 버튼1 (2045, 1370) 기준
-SEARCH_REGION2 = (2117, 1308, 120, 120)   # 버튼2 (2177, 1368) 기준
-
 # 탐색 정확도
 CONFIDENCE = 0.85
 
@@ -49,7 +58,7 @@ class RewardAutoClickApp:
     def __init__(self, root):
 
         self.root = root
-        self.root.title("BongoCat 보상 자동 수령 프로그램")
+        self.root.title("Reward Auto Click")
         self.root.geometry("520x560")
 
         # 상태 변수
@@ -77,7 +86,7 @@ class RewardAutoClickApp:
 
         tk.Label(
             self.root,
-            text="Bongo Cat 보상 자동 수령",
+            text="Reward Auto Click",
             font=("Malgun Gothic", 16, "bold")
         ).pack(pady=10)
 
@@ -283,45 +292,45 @@ class RewardAutoClickApp:
 
         x, y = point
         pyautogui.moveTo(x, y)
+        time.sleep(0.1)
         pyautogui.click()
 
     # ---------------- 감시 루프 ---------------- #
 
     def monitor_loop(self):
 
+        import numpy as np
+        import cv2
+
+        # 아이콘 이미지 로드
+        icon1 = cv2.imread(REWARD_ICON1)
+        icon2 = cv2.imread(REWARD_ICON2)
+
         while self.running and not self.stop_requested:
 
             try:
 
-                # 아이콘1 탐지
-                found1 = None
-                try:
-                    found1 = pyautogui.locateCenterOnScreen(
-                        REWARD_ICON1,
-                        confidence=CONFIDENCE,
-                        region=SEARCH_REGION1
-                    )
-                except pyautogui.ImageNotFoundException:
-                    pass
+                with mss.mss() as sct:
+                    # 전체 가상 화면 캡처 (모든 모니터 포함)
+                    monitor = sct.monitors[0]
+                    screenshot = np.array(sct.grab(monitor))
+                    screen_bgr = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2BGR)
 
-                if found1:
+                # 아이콘1 탐지
+                result1 = cv2.matchTemplate(screen_bgr, icon1, cv2.TM_CCOEFF_NORMED)
+                _, max_val1, _, _ = cv2.minMaxLoc(result1)
+
+                if max_val1 >= CONFIDENCE:
                     self.post_click(self.rewardpoint1)
                     self.log("아이템 상자 보상을 수령했습니다.")
                     time.sleep(WAIT_AFTER_CLICK)
                     continue
 
                 # 아이콘2 탐지
-                found2 = None
-                try:
-                    found2 = pyautogui.locateCenterOnScreen(
-                        REWARD_ICON2,
-                        confidence=CONFIDENCE,
-                        region=SEARCH_REGION2
-                    )
-                except pyautogui.ImageNotFoundException:
-                    pass
+                result2 = cv2.matchTemplate(screen_bgr, icon2, cv2.TM_CCOEFF_NORMED)
+                _, max_val2, _, _ = cv2.minMaxLoc(result2)
 
-                if found2:
+                if max_val2 >= CONFIDENCE:
                     self.post_click(self.rewardpoint2)
                     self.log("이모지 상자 보상을 수령했습니다.")
                     time.sleep(WAIT_AFTER_CLICK)
